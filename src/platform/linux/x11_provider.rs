@@ -36,6 +36,22 @@ mod xutils {
         }
     }
 
+    impl Drop for XDisplayHandle {
+        fn drop(&mut self) {
+            unsafe {
+                xlib::XCloseDisplay(**self);
+            }
+        }
+    }
+
+    impl Drop for XImageHandle {
+        fn drop(&mut self) {
+            unsafe {
+                xlib::XDestroyImage(**self);
+            }
+        }
+    }
+
     impl XDisplayHandle {
         pub unsafe fn open(name: Option<std::ffi::CString>) -> Result<Self> {
             let name = match name {
@@ -211,16 +227,16 @@ impl WindowCaptureProvider for X11Provider {
             let window_rect = display.get_window_rect(window_id);
             let ximage = display.get_image(window_id, window_rect)?;
             let image: ImageBuffer = ximage.try_into()?;
-            xlib::XFree(*display as *mut std::ffi::c_void);
             Ok(image)
         }
     }
 
     fn capture_focused_window(&self) -> Result<ImageBuffer> {
         unsafe {
-            let display = X11Helper::open_default_display()?;
-            let window = X11Helper::get_focused_window(&display);
-            xlib::XFree(*display as *mut std::ffi::c_void);
+            let window = {
+                let display = X11Helper::open_default_display()?;
+                X11Helper::get_focused_window(&display)
+            };
             self.capture_window(window)
         }
     }
