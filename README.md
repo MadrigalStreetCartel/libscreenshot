@@ -17,7 +17,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-libscreenshot = "*"
+libscreenshot = { git = "https://github.com/MadrigalStreetCartel/libscreenshot" }
 ```
 
 ### Features
