@@ -1,52 +1,30 @@
 mod error;
 pub mod platform;
+pub mod prelude;
 pub mod shared;
-mod traits;
+pub mod traits;
 
 pub type ImageBuffer = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
 
 pub use traits::*;
 
-pub fn get_best_window_capture_provider() -> impl WindowCaptureProvider {
+pub fn get_window_capture_provider() -> Option<Box<dyn WindowCaptureProvider>> {
     #[cfg(target_os = "linux")]
-    {
-        platform::linux::X11Provider::new()
-    }
+    return Some(Box::new(platform::linux::X11Provider::new()));
     #[cfg(target_os = "windows")]
-    {
-        platform::windows::GdiProvider::new()
-    }
+    return Some(Box::new(platform::windows::GdiProvider::new()));
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    return None;
 }
 
-pub fn get_best_screen_capture_provider() -> impl ScreenCaptureProvider {
-    #[cfg(target_os = "linux")]
-    {
-        platform::linux::X11Provider::new()
-    }
-    #[cfg(target_os = "windows")]
-    {
-        platform::windows::GdiProvider::new()
-    }
+pub fn get_screen_capture_provider() -> Option<Box<dyn ScreenCaptureProvider>> {
+    None
 }
 
-pub fn get_best_area_capture_provider() -> impl AreaCaptureProvider {
-    #[cfg(target_os = "linux")]
-    {
-        platform::linux::X11Provider::new()
-    }
-    #[cfg(target_os = "windows")]
-    {
-        platform::windows::GdiProvider::new()
-    }
+pub fn get_area_capture_provider() -> Option<Box<dyn AreaCaptureProvider>> {
+    None
 }
 
-pub fn get_best_full_capture_provider() -> impl FullCaptureProvider {
-    #[cfg(target_os = "linux")]
-    {
-        platform::linux::X11Provider::new()
-    }
-    #[cfg(target_os = "windows")]
-    {
-        platform::windows::GdiProvider::new()
-    }
+pub fn get_full_capture_provider() -> Option<Box<dyn FullCaptureProvider>> {
+    None
 }

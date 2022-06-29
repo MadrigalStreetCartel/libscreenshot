@@ -142,6 +142,7 @@ impl GdiHelper {
     }
 }
 
+#[derive(Default)]
 pub struct GdiProvider;
 
 impl Provider for GdiProvider {

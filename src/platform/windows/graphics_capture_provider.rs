@@ -1,5 +1,6 @@
 use crate::{error::*, shared::*, traits::*, ImageBuffer};
 
+#[derive(Default)]
 pub struct GraphicsCaptureProvider;
 
 impl Provider for GraphicsCaptureProvider {

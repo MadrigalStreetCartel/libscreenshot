@@ -8,8 +8,6 @@ pub use self::full_capture_provider::*;
 pub use self::screen_capture_provider::*;
 pub use self::window_capture_provider::*;
 
-pub trait Provider:
-    WindowCaptureProvider + ScreenCaptureProvider + AreaCaptureProvider + FullCaptureProvider
-{
+pub trait Provider {
     fn new() -> Self;
 }

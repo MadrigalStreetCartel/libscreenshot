@@ -12,7 +12,6 @@ mod xutils {
 
     pub struct XImageHandle(*mut xlib::XImage);
 
-    #[allow(dead_code)]
     pub struct Rect {
         x: i32,
         y: i32,
@@ -22,7 +21,12 @@ mod xutils {
 
     impl Rect {
         pub fn to_client_coordinates(&self) -> Rect {
-            Rect { x: 0, y: 0, w: self.w, h: self.h }
+            Rect {
+                x: 0,
+                y: 0,
+                w: self.w,
+                h: self.h,
+            }
         }
     }
 
@@ -160,7 +164,14 @@ mod xutils {
             }
 
             #[inline]
-            unsafe fn subpixel_at(handle: &XImageHandle, x: u32, y: u32, data: &[u8], stride: u32, channel_offset: u32) -> u8 {
+            unsafe fn subpixel_at(
+                handle: &XImageHandle,
+                x: u32,
+                y: u32,
+                data: &[u8],
+                stride: u32,
+                channel_offset: u32,
+            ) -> u8 {
                 let index = y * (***handle).bytes_per_line as u32 + x * stride + channel_offset;
                 data[index as usize]
             }
@@ -172,7 +183,8 @@ mod xutils {
                     _ => Err(Error::WindowCaptureFailed),
                 }?;
 
-                let (mask_r, mask_g, mask_b) = ((**self).red_mask, (**self).green_mask, (**self).blue_mask);
+                let (mask_r, mask_g, mask_b) =
+                    ((**self).red_mask, (**self).green_mask, (**self).blue_mask);
                 let mask_a = !(mask_r | mask_g | mask_b);
                 let offset_r = channel_offset(&self, mask_r)?;
                 let offset_g = channel_offset(&self, mask_g)?;
@@ -181,18 +193,19 @@ mod xutils {
                 let size = ((**self).bytes_per_line * (**self).height) as usize;
                 let data = std::slice::from_raw_parts((**self).data as *const u8, size);
 
-                let image = ImageBuffer::from_fn((**self).width as u32, (**self).height as u32, |x, y| {
-                    *image::Pixel::from_slice(&[
-                        subpixel_at(&self, x, y, data, stride, offset_r),
-                        subpixel_at(&self, x, y, data, stride, offset_g),
-                        subpixel_at(&self, x, y, data, stride, offset_b),
-                        if (**self).depth == 24 {
-                            0xFF
-                        } else {
-                            subpixel_at(&self, x, y, data, stride, offset_a)
-                        },
-                    ])
-                });
+                let image =
+                    ImageBuffer::from_fn((**self).width as u32, (**self).height as u32, |x, y| {
+                        *image::Pixel::from_slice(&[
+                            subpixel_at(&self, x, y, data, stride, offset_r),
+                            subpixel_at(&self, x, y, data, stride, offset_g),
+                            subpixel_at(&self, x, y, data, stride, offset_b),
+                            if (**self).depth == 24 {
+                                0xFF
+                            } else {
+                                subpixel_at(&self, x, y, data, stride, offset_a)
+                            },
+                        ])
+                    });
 
                 Ok(image)
             }
@@ -200,6 +213,7 @@ mod xutils {
     }
 }
 
+#[derive(Default)]
 pub struct X11Provider;
 
 impl Provider for X11Provider {
