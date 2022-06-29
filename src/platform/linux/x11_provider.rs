@@ -198,7 +198,7 @@ impl X11Helper {
 
 pub struct X11Provider;
 
-impl Provider for GraphicsCaptureProvider {
+impl Provider for X11Provider {
     fn new() -> Self {
         Self
     }
