@@ -20,6 +20,12 @@ mod xutils {
         h: u32,
     }
 
+    impl Rect {
+        pub fn to_client_coordinates(&self) -> Rect {
+            Rect { x: 0, y: 0, w: self.w, h: self.h }
+        }
+    }
+
     impl Deref for XDisplayHandle {
         type Target = *mut xlib::Display;
 
@@ -64,7 +70,20 @@ mod xutils {
             }
         }
 
-        pub unsafe fn get_window_rect(&self, window_id: xlib::Window) -> Rect {
+        pub unsafe fn open_default_display() -> Result<Self> {
+            Self::open(None)
+        }
+
+        pub unsafe fn get_focused_window(&self) -> xlib::Window {
+            let mut window = 0x0 as xlib::Window;
+            let window_ptr = &mut window as *mut u64;
+            let mut revert_to = 0;
+            let revert_to_ptr = &mut revert_to as *mut i32;
+            let _ = xlib::XGetInputFocus(**self, window_ptr, revert_to_ptr);
+            window
+        }
+
+        pub unsafe fn get_client_rect(&self, window_id: xlib::Window) -> Rect {
             let mut attrs = std::mem::MaybeUninit::uninit();
 
             xlib::XGetWindowAttributes(**self, window_id, attrs.as_mut_ptr());
@@ -106,16 +125,16 @@ mod xutils {
         pub unsafe fn get_image(
             &self,
             window_id: xlib::Window,
-            rect: Rect,
+            client_rect: Rect,
         ) -> Result<XImageHandle> {
             const ALL_PLANES: u64 = !0;
             match xlib::XGetImage(
                 **self,
                 window_id,
-                0,
-                0,
-                rect.w,
-                rect.h,
+                client_rect.x,
+                client_rect.y,
+                client_rect.w,
+                client_rect.h,
                 ALL_PLANES,
                 xlib::ZPixmap,
             ) {
@@ -129,62 +148,48 @@ mod xutils {
         type Error = Error;
 
         fn try_into(self) -> std::result::Result<ImageBuffer, Self::Error> {
-            unsafe {
-                macro_rules! get {
-                    ($($a:ident),+) => ($(let $a = (**self).$a;)+);
+            #[inline]
+            unsafe fn channel_offset(handle: &XImageHandle, mask: u64) -> Result<u32> {
+                match ((***handle).byte_order, mask & 0xFFFFFFFF) {
+                    (0, 0xFF) | (1, 0xFF000000) => Ok(0),
+                    (0, 0xFF00) | (1, 0xFF0000) => Ok(1),
+                    (0, 0xFF0000) | (1, 0xFF00) => Ok(2),
+                    (0, 0xFF000000) | (1, 0xFF) => Ok(3),
+                    _ => Err(Error::WindowCaptureFailed),
                 }
+            }
 
-                get!(
-                    width,
-                    height,
-                    byte_order,
-                    depth,
-                    bytes_per_line,
-                    bits_per_pixel,
-                    red_mask,
-                    green_mask,
-                    blue_mask
-                );
+            #[inline]
+            unsafe fn subpixel_at(handle: &XImageHandle, x: u32, y: u32, data: &[u8], stride: u32, channel_offset: u32) -> u8 {
+                let index = y * (***handle).bytes_per_line as u32 + x * stride + channel_offset;
+                data[index as usize]
+            }
 
-                let stride = match (depth, bits_per_pixel) {
+            unsafe {
+                let stride = match ((**self).depth, (**self).bits_per_pixel) {
                     (24, 24) => Ok(3),
                     (24, 32) | (32, 32) => Ok(4),
                     _ => Err(Error::WindowCaptureFailed),
                 }?;
 
-                macro_rules! channel_offset {
-                    ($mask:expr) => {
-                        match (byte_order, $mask & 0xFFFFFFFF) {
-                            (0, 0xFF) | (1, 0xFF000000) => Ok(0),
-                            (0, 0xFF00) | (1, 0xFF0000) => Ok(1),
-                            (0, 0xFF0000) | (1, 0xFF00) => Ok(2),
-                            (0, 0xFF000000) | (1, 0xFF) => Ok(3),
-                            _ => Err(Error::WindowCaptureFailed),
-                        }
-                    };
-                }
-                let red_offset = channel_offset!(red_mask)?;
-                let green_offset = channel_offset!(green_mask)?;
-                let blue_offset = channel_offset!(blue_mask)?;
-                let alpha_offset = channel_offset!(!(red_mask | green_mask | blue_mask))?;
-                let size = (bytes_per_line * height) as usize;
+                let (mask_r, mask_g, mask_b) = ((**self).red_mask, (**self).green_mask, (**self).blue_mask);
+                let mask_a = !(mask_r | mask_g | mask_b);
+                let offset_r = channel_offset(&self, mask_r)?;
+                let offset_g = channel_offset(&self, mask_g)?;
+                let offset_b = channel_offset(&self, mask_b)?;
+                let offset_a = channel_offset(&self, mask_a)?;
+                let size = ((**self).bytes_per_line * (**self).height) as usize;
                 let data = std::slice::from_raw_parts((**self).data as *const u8, size);
 
-                let image = ImageBuffer::from_fn(width as u32, height as u32, |x, y| {
-                    macro_rules! subpixel {
-                        ($channel_offset:ident) => {
-                            data[(y * bytes_per_line as u32 + x * stride as u32 + $channel_offset)
-                                as usize]
-                        };
-                    }
+                let image = ImageBuffer::from_fn((**self).width as u32, (**self).height as u32, |x, y| {
                     *image::Pixel::from_slice(&[
-                        subpixel!(red_offset),
-                        subpixel!(green_offset),
-                        subpixel!(blue_offset),
-                        if depth == 24 {
+                        subpixel_at(&self, x, y, data, stride, offset_r),
+                        subpixel_at(&self, x, y, data, stride, offset_g),
+                        subpixel_at(&self, x, y, data, stride, offset_b),
+                        if (**self).depth == 24 {
                             0xFF
                         } else {
-                            subpixel!(alpha_offset)
+                            subpixel_at(&self, x, y, data, stride, offset_a)
                         },
                     ])
                 });
@@ -192,23 +197,6 @@ mod xutils {
                 Ok(image)
             }
         }
-    }
-}
-
-struct X11Helper;
-
-impl X11Helper {
-    unsafe fn get_focused_window(handle: &xutils::XDisplayHandle) -> xlib::Window {
-        let mut w = 0x0 as xlib::Window;
-        let raw_w_ptr = &mut w as *mut u64;
-        let mut revert_to = 0;
-        let raw_revert_to_ptr = &mut revert_to as *mut i32;
-        let _active_window = xlib::XGetInputFocus(**handle, raw_w_ptr, raw_revert_to_ptr);
-        w
-    }
-
-    unsafe fn open_default_display() -> Result<xutils::XDisplayHandle> {
-        xutils::XDisplayHandle::open(None)
     }
 }
 
@@ -223,9 +211,10 @@ impl Provider for X11Provider {
 impl WindowCaptureProvider for X11Provider {
     fn capture_window(&self, window_id: WindowId) -> Result<ImageBuffer> {
         unsafe {
-            let display = X11Helper::open_default_display()?;
-            let window_rect = display.get_window_rect(window_id);
-            let ximage = display.get_image(window_id, window_rect)?;
+            let display = xutils::XDisplayHandle::open_default_display()?;
+            let window_rect = display.get_client_rect(window_id);
+            let client_rect = window_rect.to_client_coordinates();
+            let ximage = display.get_image(window_id, client_rect)?;
             let image: ImageBuffer = ximage.try_into()?;
             Ok(image)
         }
@@ -233,10 +222,7 @@ impl WindowCaptureProvider for X11Provider {
 
     fn capture_focused_window(&self) -> Result<ImageBuffer> {
         unsafe {
-            let window = {
-                let display = X11Helper::open_default_display()?;
-                X11Helper::get_focused_window(&display)
-            };
+            let window = xutils::XDisplayHandle::open_default_display()?.get_focused_window();
             self.capture_window(window)
         }
     }
