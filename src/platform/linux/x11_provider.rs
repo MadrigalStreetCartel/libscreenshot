@@ -182,12 +182,12 @@ mod xutils {
 struct X11Helper;
 
 impl X11Helper {
-    unsafe fn get_focused_window(handle: xutils::XDisplayHandle) -> xlib::Window {
+    unsafe fn get_focused_window(handle: &xutils::XDisplayHandle) -> xlib::Window {
         let mut w = 0x0 as xlib::Window;
         let raw_w_ptr = &mut w as *mut u64;
         let mut revert_to = 0;
         let raw_revert_to_ptr = &mut revert_to as *mut i32;
-        let _active_window = xlib::XGetInputFocus(*handle, raw_w_ptr, raw_revert_to_ptr);
+        let _active_window = xlib::XGetInputFocus(**handle, raw_w_ptr, raw_revert_to_ptr);
         w
     }
 
@@ -210,14 +210,17 @@ impl WindowCaptureProvider for X11Provider {
             let display = X11Helper::open_default_display()?;
             let window_rect = display.get_window_rect(window_id);
             let ximage = display.get_image(window_id, window_rect)?;
-            ximage.try_into()
+            let image: ImageBuffer = ximage.try_into()?;
+            xlib::XFree(*display as *mut std::ffi::c_void);
+            Ok(image)
         }
     }
 
     fn capture_focused_window(&self) -> Result<ImageBuffer> {
         unsafe {
             let display = X11Helper::open_default_display()?;
-            let window = X11Helper::get_focused_window(display);
+            let window = X11Helper::get_focused_window(&display);
+            xlib::XFree(*display as *mut std::ffi::c_void);
             self.capture_window(window)
         }
     }
