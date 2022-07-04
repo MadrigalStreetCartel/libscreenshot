@@ -6,7 +6,7 @@
 | Platform | Features        |
 | -------- | --------------- |
 | Windows  | `WindowCapture` |
-| Linux    | `WindowCapture` |
+| Linux    | `WindowCapture, AreaCapture, FullCapture` |
 | macOS    | None            |
 
 ## Usage
