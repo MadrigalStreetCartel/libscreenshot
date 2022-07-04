@@ -2,6 +2,8 @@ use std::num::TryFromIntError;
 
 use crate::error::Error;
 
+use super::Area;
+
 /// Generic area for specialization of `Area` to a specific platform backend.
 pub struct GenericArea<XY, WH> {
     pub x: XY,

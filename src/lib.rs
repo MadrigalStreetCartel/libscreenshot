@@ -26,5 +26,8 @@ pub fn get_area_capture_provider() -> Option<Box<dyn AreaCaptureProvider>> {
 }
 
 pub fn get_full_capture_provider() -> Option<Box<dyn FullCaptureProvider>> {
-    None
+    #[cfg(target_os = "linux")]
+    return Some(Box::new(platform::linux::X11Provider::new()));
+    #[cfg(not(target_os = "linux"))]
+    return None;
 }

@@ -1,12 +1,13 @@
 use crate::{error::*, shared::*, traits::*, ImageBuffer};
 
+use image::math::Rect;
 use x11::xlib;
 
 mod xutils {
     use std::ops::Deref;
     use x11::xlib;
 
-    use crate::{error::*, ImageBuffer};
+    use crate::{error::*, shared::GenericArea, ImageBuffer};
 
     pub struct XDisplayHandle(*mut xlib::Display);
 
@@ -26,6 +27,17 @@ mod xutils {
                 y: 0,
                 w: self.w,
                 h: self.h,
+            }
+        }
+    }
+
+    impl From<GenericArea<i32, u32>> for Rect {
+        fn from(garea: GenericArea<i32, u32>) -> Self {
+            Rect {
+                x: garea.x,
+                y: garea.y,
+                w: garea.width,
+                h: garea.height,
             }
         }
     }
@@ -146,13 +158,26 @@ mod xutils {
                 d => Ok(XImageHandle(d)),
             }
         }
+
+        /*pub unsafe fn get_default_root(&self)-> xlib::Window {
+            xlib::XDefaultRootWindow(**self)
+        }*/
+
+        pub unsafe fn get_default_screen_of_display(&self) -> *mut xlib::Screen {
+            xlib::XDefaultScreenOfDisplay(**self)
+        }
+
+        pub unsafe fn get_root_window_of_screen(&self) -> xlib::Window {
+            let xdsoc = self.get_default_screen_of_display();
+            xlib::XRootWindowOfScreen(xdsoc)
+        }
     }
 
     impl TryInto<ImageBuffer> for XImageHandle {
         type Error = Error;
 
         fn try_into(self) -> std::result::Result<ImageBuffer, Self::Error> {
-            #[inline]
+            #[inline(always)]
             unsafe fn channel_offset(handle: &XImageHandle, mask: u64) -> Result<u32> {
                 match ((***handle).byte_order, mask & 0xFFFFFFFF) {
                     (0, 0xFF) | (1, 0xFF000000) => Ok(0),
@@ -163,7 +188,7 @@ mod xutils {
                 }
             }
 
-            #[inline]
+            #[inline(always)]
             unsafe fn subpixel_at(
                 handle: &XImageHandle,
                 x: u32,
@@ -206,7 +231,6 @@ mod xutils {
                             },
                         ])
                     });
-
                 Ok(image)
             }
         }
@@ -253,13 +277,26 @@ impl ScreenCaptureProvider for X11Provider {
 }
 
 impl AreaCaptureProvider for X11Provider {
-    fn capture_area(&self, _area: Area) -> Result<ImageBuffer> {
-        unimplemented!()
+    fn capture_area(&self, area: Area) -> Result<ImageBuffer> {
+        unsafe {
+            let area: xutils::Rect = GenericArea::<i32, u32>::try_from(area)?.into();
+            let display = xutils::XDisplayHandle::open_default_display()?;
+            let root = display.get_root_window_of_screen();
+            let ximage = display.get_image(root, area)?;
+            let image: ImageBuffer = ximage.try_into()?;
+            Ok(image)
+        }
     }
 }
 
 impl FullCaptureProvider for X11Provider {
     fn capture_full(&self) -> Result<ImageBuffer> {
-        unimplemented!()
+        unsafe {
+            let display = xutils::XDisplayHandle::open_default_display()?;
+            let screen = display.get_default_screen_of_display();
+            let width = (*screen).width as u64;
+            let height = (*screen).height as u64;
+            self.capture_area(Area::new(0, 0, width, height))
+        }
     }
 }
