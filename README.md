@@ -1,6 +1,20 @@
 # libscreenshot
 > A cross-platform library for screenshot creation.
 
+Features:
+- Easy cross-platform creation of screenshots
+- Supports several types of screenshots
+  - Window capture (focused window, by window id)
+  - Screen capture (current screen, by screen id)
+  - Full capture (all screens and windows)
+  - Area capture
+
+Limitations:
+- Varying degrees of support for specific platforms (see `Platform Support`)
+- For window capture, the window will be captured without the title area (except on macOS)
+
+We are actively working on removing all of those limitations.
+
 ## Platform Support
 
 | Platform | Window | Area | Screen | Full |
