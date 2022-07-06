@@ -3,11 +3,11 @@
 
 ## Platform Support
 
-| Platform | Features        |
-| -------- | --------------- |
-| Windows  | `WindowCapture` |
-| Linux    | `WindowCapture, AreaCapture, FullCapture` |
-| macOS    | None            |
+| Platform | Window | Area | Screen | Full |
+| -------- | ------------- | ----------- | ------------- | ----------- |
+| Windows  | ✅            | ❌           | ❌            | ❌          |
+| Linux    | ✅            | ✅           | ❌            | ✅          |
+| macOS    | ✅            | ❌           | ✅            | ❌          |
 
 ## Usage
 
@@ -33,9 +33,16 @@ libscreenshot = { git = "https://github.com/MadrigalStreetCartel/libscreenshot" 
 
 ### Examples
 
+**Capture focused window**:
 ```rust
-let provider = libscreenshot::get_best_window_capture_provider();
-if let Ok(image) = provider.capture_focused_window() {
-  image.save_to_file("screenshot.png").unwrap();
-}
+let provider libscreenshot::get_window_capture_provider().expect("Unable to find provider");
+let image = provider.capture_current_screen().expect("Unable to capture screen");
+image.save("screenshot.png").expect("Unable to save image");
+```
+
+**Capture current screen**:
+```rust
+let provider libscreenshot::get_screen_capture_provider().expect("Unable to find provider");
+let image = provider.capture_current_screen().expect("Unable to capture screen");
+image.save("screenshot.png").expect("Unable to save image");
 ```

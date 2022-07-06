@@ -1,21 +1,21 @@
 [package]
 name = "libscreenshot"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [features]
 default = ["windows", "linux", "macos"]
 
 # Windows
-windows_graphics_capture = ["dep:windows"]
-windows_gdi = ["dep:windows"]
+windows_graphics_capture = []
+windows_gdi = []
 windows = [
     "windows_graphics_capture",
     "windows_gdi"
 ]
 
 # Linux
-linux_xorg = ["dep:x11"]
+linux_xorg = []
 linux_wayland = []
 linux = [
     "linux_xorg",
@@ -30,7 +30,13 @@ thiserror = "1.0"
 image = "0.24"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.38", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Storage_Xps"], optional = true }
+windows = { version = "0.38", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Storage_Xps"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-x11 = { version = "2.19", features = ["xlib", "xrandr"], optional = true }
+x11 = { version = "2.19", features = ["xlib", "xrandr"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.22"
+core-foundation = "0.9.3"
+foreign-types = "0.3.0"
+macos-bindings = { path = "./macos-bindings" }
