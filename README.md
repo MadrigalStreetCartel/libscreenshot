@@ -49,14 +49,14 @@ libscreenshot = { git = "https://github.com/MadrigalStreetCartel/libscreenshot" 
 
 **Capture focused window**:
 ```rust
-let provider libscreenshot::get_window_capture_provider().expect("Unable to find provider");
-let image = provider.capture_current_screen().expect("Unable to capture screen");
+let provider = libscreenshot::get_window_capture_provider().expect("Unable to find provider");
+let image = provider.capture_focused_window().expect("Unable to capture focused window");
 image.save("screenshot.png").expect("Unable to save image");
 ```
 
 **Capture current screen**:
 ```rust
-let provider libscreenshot::get_screen_capture_provider().expect("Unable to find provider");
+let provider = libscreenshot::get_screen_capture_provider().expect("Unable to find provider");
 let image = provider.capture_current_screen().expect("Unable to capture screen");
 image.save("screenshot.png").expect("Unable to save image");
 ```
