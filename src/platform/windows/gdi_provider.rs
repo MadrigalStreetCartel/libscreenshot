@@ -190,6 +190,46 @@ impl WindowCaptureProvider for GdiProvider {
             self.capture_window(hwnd.0 as u64)
         }
     }
+
+    fn capture_window_area(&self, window_id: WindowId, area: Area) -> Result<ImageBuffer> {
+        let hwnd = HWND(window_id.try_into()?);
+        unsafe {
+            let area = GenericArea::<i32, i32>::try_from(area)?;
+            let hdc = GdiHelper::get_dc(hwnd)?;
+            //let rect = GdiHelper::get_window_rect(hwnd, hdc)?;
+            //let (w, h) = (rect.right - rect.left, rect.bottom - rect.top);
+            let chdc = GdiHelper::create_compatible_dc(hdc)?;
+            let hbmp = GdiHelper::create_compatible_bitmap(hdc, chdc, area.width, area.height)?;
+            let _hgdiobj = GdiHelper::select_object(hdc, chdc, hbmp)?;
+            let mut bmpi = GdiHelper::create_bitmap_info(area.width, area.height);
+            GdiHelper::print_window(
+                hwnd,
+                hdc,
+                chdc,
+                hbmp,
+                PRINT_WINDOW_FLAGS(PW_RENDERFULLCONTENT | PW_CLIENTONLY.0),
+            )?;
+            let mut buf = {
+                let mut buf = vec![0u8; (4 * area.width * area.height) as usize];
+                GdiHelper::get_di_bits(hdc, chdc, hbmp, area.height as u32, &mut bmpi, &mut buf)?;
+                buf
+            };
+            // Convert from BGRA to RGBA
+            buf.chunks_exact_mut(4).for_each(|c| c.swap(0, 2));
+            // Free handles
+            DeleteDC(chdc);
+            DeleteObject(hbmp);
+            ReleaseDC(HWND::default(), hdc);
+            ImageBuffer::from_raw(area.width as u32, area.height as u32, buf).ok_or(Error::WindowCaptureFailed)
+        }
+    }
+
+    fn capture_focused_window_area(&self, area: Area) -> Result<ImageBuffer> {
+        unsafe {
+            let hwnd = GetForegroundWindow();
+            self.capture_window_area(hwnd.0 as u64, area)
+        }
+    }
 }
 
 impl ScreenCaptureProvider for GdiProvider {

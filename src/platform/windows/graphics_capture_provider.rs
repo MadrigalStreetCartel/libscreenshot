@@ -23,6 +23,14 @@ impl WindowCaptureProvider for GraphicsCaptureProvider {
     fn capture_focused_window(&self) -> Result<ImageBuffer> {
         unimplemented!()
     }
+
+    fn capture_window_area(&self, _window_id: WindowId, _area: Area) -> Result<ImageBuffer> {
+        unimplemented!()
+    }
+
+    fn capture_focused_window_area(&self, _area: Area) -> Result<ImageBuffer> {
+        unimplemented!()
+    }
 }
 
 impl ScreenCaptureProvider for GraphicsCaptureProvider {
