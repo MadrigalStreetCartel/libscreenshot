@@ -196,8 +196,6 @@ impl WindowCaptureProvider for GdiProvider {
         unsafe {
             let area = GenericArea::<i32, i32>::try_from(area)?;
             let hdc = GdiHelper::get_dc(hwnd)?;
-            //let rect = GdiHelper::get_window_rect(hwnd, hdc)?;
-            //let (w, h) = (rect.right - rect.left, rect.bottom - rect.top);
             let chdc = GdiHelper::create_compatible_dc(hdc)?;
             let hbmp = GdiHelper::create_compatible_bitmap(hdc, chdc, area.width, area.height)?;
             let _hgdiobj = GdiHelper::select_object(hdc, chdc, hbmp)?;
