@@ -109,7 +109,7 @@ impl GdiHelper {
             hbmp,
             0,
             h,
-            buf.as_mut_ptr() as *mut std::ffi::c_void,
+            Some(buf.as_mut_ptr() as *mut std::ffi::c_void),
             bmi,
             DIB_RGB_COLORS,
         );
@@ -132,7 +132,7 @@ impl GdiHelper {
             biBitCount: 32,
             biWidth: w,
             biHeight: -h,
-            biCompression: BI_RGB as u32,
+            biCompression: BI_RGB.0 as u32,
             ..Default::default()
         };
         BITMAPINFO {
