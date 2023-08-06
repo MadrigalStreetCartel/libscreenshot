@@ -4,7 +4,6 @@
 #![allow(improper_ctypes)]
 #![allow(dead_code)]
 #![allow(deref_nullptr)]
-#![allow(unaligned_references)]
 #![allow(clippy::all)]
 
 #[cfg(target_os = "macos")]
