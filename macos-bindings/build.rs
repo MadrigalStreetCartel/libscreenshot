@@ -12,10 +12,10 @@ pub fn main() {
     let target = std::env::var("TARGET").unwrap();
     let sdk_path = get_sdk_path().unwrap();
 
+    println!("cargo:rustc-link-lib=framework=Foundation");
     println!("cargo:rustc-link-lib=framework=AppKit");
 
     let builder = bindgen::Builder::default()
-        .rustfmt_bindings(true)
         .header_contents(
             "NSWorkspace.h",
             "

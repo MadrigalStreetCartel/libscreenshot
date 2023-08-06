@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [target.'cfg(target_os = "macos")'.build-dependencies]
-bindgen = "0.59"
+# Somehow versions over 0.63 error out:
+# thread 'main' panicked at 'Invalid identifier: Error("expected identifier")', /Users/splitty/.cargo/registry/src/index.crates.io-6f17d22bba15001f/bindgen-0.64.0/ir/objc.rs:272:3
+bindgen = "0.63"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
