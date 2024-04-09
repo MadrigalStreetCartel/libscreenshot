@@ -14,7 +14,7 @@ use core_graphics::{
     image::CGImage,
     window::{
         kCGNullWindowID, kCGWindowImageBestResolution, kCGWindowImageBoundsIgnoreFraming,
-        kCGWindowListOptionExcludeDesktopElements, kCGWindowListOptionIncludingWindow,
+        kCGWindowListExcludeDesktopElements, kCGWindowListOptionIncludingWindow,
         kCGWindowListOptionOnScreenBelowWindow, kCGWindowListOptionOnScreenOnly, kCGWindowNumber,
         kCGWindowOwnerPID, CGWindowID, CGWindowListCreateImage,
     },
@@ -49,7 +49,7 @@ impl WindowCaptureProvider for CGProvider {
             // Capture window
             let cg_image = CGWindowListCreateImage(
                 CGRectNull,
-                kCGWindowListOptionExcludeDesktopElements
+                kCGWindowListExcludeDesktopElements
                     | kCGWindowListOptionIncludingWindow
                     | kCGWindowListOptionOnScreenBelowWindow,
                 window_id as CGWindowID,
@@ -87,7 +87,7 @@ impl WindowCaptureProvider for CGProvider {
             let active_pid = active_app.processIdentifier();
 
             // Enumerate windows
-            let flags = kCGWindowListOptionExcludeDesktopElements | kCGWindowListOptionOnScreenOnly;
+            let flags = kCGWindowListExcludeDesktopElements | kCGWindowListOptionOnScreenOnly;
             let window_list_info = CGWindowListCopyWindowInfo(flags, kCGNullWindowID);
             let window_list_info_count = CFArrayGetCount(window_list_info);
 
